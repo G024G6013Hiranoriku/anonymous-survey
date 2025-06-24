@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>卒研アンケート</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <style>
+      input[type=range] { width: 300px; }
+      .value { display: inline-block; width: 30px; text-align: right; }
+    </style>
+  </head>
+  <body>
+    <h2>卒業研究テーマ中間報告アンケート</h2>
+
+    <form id="percentForm" onsubmit="handleSubmit(event)">
+      <div>年齢：<input type="number" id="ageInput" min="0" max="130" required> 歳</div><br>
+
+      <div>現在の3つの軸の割合</div><br>
+      <div>自分: <input type="range" id="nowA" min="0" max="100" value="0" oninput="updateNow()">
+        <span class="value" id="nowAValue">0</span>%</div>
+      <div>友人: <input type="range" id="nowB" min="0" max="100" value="0" oninput="updateNow()">
+        <span class="value" id="nowBValue">0</span>%</div>
+      <div>家族・恋人: <input type="range" id="nowC" min="0" max="100" value="0" oninput="updateNow()">
+        <span class="value" id="nowCValue">0</span>%</div>
+      <p>合計: <span id="nowTotal">0</span>%</p>
+      <p id="nowError" style="color:red; display:none;">合計が100%を超えています！</p>
+
+      <br>
+      <div>
+        その割合にどれだけ満足していますか？
+        <div>
+          <label><input type="radio" name="satisfaction" value="満足"> 満足</label><br>
+          <label><input type="radio" name="satisfaction" value="やや満足"> やや満足</label><br>
+          <label><input type="radio" name="satisfaction" value="不満"> 不満</label><br>
+        </div>
+      </div>
+
+      <br>
+      <div>理想の割合</div><br>
+      <div>自分: <input type="range" id="idealA" min="0" max="100" value="0" oninput="updateIdeal()">
+        <span class="value" id="idealAValue">0</span>%</div>
+      <div>友人: <input type="range" id="idealB" min="0" max="100" value="0" oninput="updateIdeal()">
+        <span class="value" id="idealBValue">0</span>%</div>
+      <div>家族・恋人: <input type="range" id="idealC" min="0" max="100" value="0" oninput="updateIdeal()">
+        <span class="value" id="idealCValue">0</span>%</div>
+      <p>合計: <span id="idealTotal">0</span>%</p>
+      <p id="idealError" style="color:red; display:none;">合計が100%を超えています！</p>
+
+      <br>
+      <button type="submit">送信</button>
+    </form>
+
+    <script>
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+      };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.firestore();
+
+      firebase.auth().signInAnonymously().catch(console.error);
+
+      function updateNow() {
+        const a = +document.getElementById('nowA').value;
+        const b = +document.getElementById('nowB').value;
+        const c = +document.getElementById('nowC').value;
+        const total = a + b + c;
+        document.getElementById('nowAValue').textContent = a;
+        document.getElementById('nowBValue').textContent = b;
+        document.getElementById('nowCValue').textContent = c;
+        document.getElementById('nowTotal').textContent = total;
+        document.getElementById('nowError').style.display = total > 100 ? 'block' : 'none';
+      }
+
+      function updateIdeal() {
+        const a = +document.getElementById('idealA').value;
+        const b = +document.getElementById('idealB').value;
+        const c = +document.getElementById('idealC').value;
+        const total = a + b + c;
+        document.getElementById('idealAValue').textContent = a;
+        document.getElementById('idealBValue').textContent = b;
+        document.getElementById('idealCValue').textContent = c;
+        document.getElementById('idealTotal').textContent = total;
+        document.getElementById('idealError').style.display = total > 100 ? 'block' : 'none';
+      }
+
+      function handleSubmit(e) {
+        e.preventDefault();
+
+        const age = +document.getElementById('ageInput').value;
+        const nowA = +document.getElementById('nowA').value;
+        const nowB = +document.getElementById('nowB').value;
+        const nowC = +document.getElementById('nowC').value;
+        const nowTotal = nowA + nowB + nowC;
+
+        const idealA = +document.getElementById('idealA').value;
+        const idealB = +document.getElementById('idealB').value;
+        const idealC = +document.getElementById('idealC').value;
+        const idealTotal = idealA + idealB + idealC;
+
+        const satisfaction = document.querySelector('input[name="satisfaction"]:checked')?.value || "";
+
+        if (nowTotal > 100 || idealTotal > 100) {
+          updateNow();
+          updateIdeal();
+          return;
+        }
+
+        db.collection("responses").add({
+          timestamp: new Date(),
+          age: age,
+          now: { self: nowA, friends: nowB, family: nowC, total: nowTotal },
+          ideal: { self: idealA, friends: idealB, family: idealC, total: idealTotal },
+          satisfaction: satisfaction
+        }).then(() => {
+          alert("送信しました！");
+          document.getElementById('percentForm').reset();
+          updateNow();
+          updateIdeal();
+        }).catch((error) => {
+          alert("エラーが発生しました: " + error);
+        });
+      }
+
+      window.onload = () => { updateNow(); updateIdeal(); };
+    </script>
+  </body>
+</html>
